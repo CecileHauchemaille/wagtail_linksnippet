@@ -16,7 +16,7 @@
             const $currentTarget = $(e.currentTarget);
             const data = $currentTarget.data();
             data.href = $currentTarget.attr('href');
-            data.anchorText = $currentTarget.text();
+            data.anchorText = $currentTarget.text().trim();
             callback(data);
         });
     };
@@ -29,15 +29,15 @@
                 callback(data);
             });
         });
-    };    
+    };
 
     function initModelChooser() {
         window.modelChooserConfigs.forEach(function(config) {
-        
+
             const React = window.React;
 
             class ModelSource extends React.Component {
-        
+
                 searchInputSelectors = '#id_q';
                 searchFormSelector = 'form[data-chooser-modal-search]';
                 searchForm = null;
@@ -47,9 +47,9 @@
                 componentDidMount() {
                     const { onClose, editorState, entityType, onComplete } = this.props;
                     const ModalWorkflow = window.ModalWorkflow;
-                    
+
                     this.onClose = onClose;
-        
+
                     ModalWorkflow({
                         url: config.chooserUrl,
                         onload: {
@@ -65,7 +65,7 @@
                         },
                     });
                 }
-        
+
                 onModalLoad = (modal, jsonData) => {
                     this.searchForm = $(this.searchFormSelector, modal.body);
                     this.searchUrl = this.searchForm.attr('action');
@@ -74,47 +74,44 @@
                     this.setupCloseButton(modal);
                     this.setupSearchFunctionality(modal);
                 };
-        
+
                 setupCloseButton(modal) {
-                    const { onClose } = this.props;
-                    modal.container.on('click', 'button.button.close', function () {
-                        onClose();
-                    });
+                    modal.container.on('hide.bs.modal', this.props.onClose);
                 }
-        
+
                 getSearchFormData() {
                     return this.searchForm.serialize();
                 }
 
                 setupSearchFunctionality(modal) {
                     const $searchResults = this.searchResults;
-        
+
                     this.searchForm.on('submit', (e) => {
                         e.preventDefault();
                         this.performSearch(modal);
                     });
-        
+
                     this.ajaxifyLinks($searchResults, modal);
                     this.attachSearch(modal);
-            
+
                 }
-        
+
                 updateResults(data, modal) {
                     this.searchResults.html(data);
                     this.ajaxifyLinks(this.searchResults, modal);
                 }
-        
+
                 performSearch(modal) {
                     const data = this.getSearchFormData()
                     $.get(this.searchUrl, data, (response) => {
                         this.updateResults(response, modal);
                     });
                 }
-        
+
                 attachSearch(modal) {
                     const inputDelay = 200;
                     let timer;
-                    
+
                     $(this.searchInputSelectors, modal.container).on('input', (e) => {
                         let request = null;
 
@@ -123,7 +120,7 @@
                         }
 
                         clearTimeout(timer);
-                        
+
                         timer = setTimeout(() => {
                             this.performSearch(modal);
                         }, inputDelay);
@@ -136,6 +133,8 @@
 
                 ajaxifyLinks($container, modal) {
                     $container.onChooserLinksClick((data) => {
+                        // We unbind the event handler to avoid aborting the link insertion during the modal close.
+                        modal.container.off('hide.bs.modal', this.props.onClose);
                         modal.respond('chosen', data);
                         modal.close();
                     });
@@ -144,10 +143,10 @@
                         this.ajaxifyLinks($container, modal);
                     });
                 }
-        
+
                 filterEntityData(data) {
                     let id = data.id;
-                    
+
                     if (!id && data.href) {
                         const href = data.href;
                         const idMatch = href.match(/\/(\d+)\/?$/);
@@ -156,12 +155,12 @@
 
                     return {
                         string: data.string || data.anchorText,
-                        id: id,          
+                        id: id,
                         app_name: config.appName,
                         model_name: config.modelName,
                     };
                 }
-            
+
                 onChosen = (data) => {
                     const { editorState, entityType, onComplete } = this.props;
                     const Modifier = window.DraftJS.Modifier;
@@ -169,23 +168,23 @@
                     const content = editorState.getCurrentContent();
                     const selection = editorState.getSelection();
                     const entityData = this.filterEntityData(data);
-        
+
                     const selectedText = content.getBlockForKey(selection.getStartKey())
                         .getText()
                         .slice(
                             selection.getStartOffset(),
                             selection.getEndOffset()
                         );
-                        
-                    const text = selectedText || data.string;
-        
+
+                    const text = selectedText || data.anchorText;
+
                     const contentWithEntity = content.createEntity(
                         entityType.type,
                         'MUTABLE',
                         entityData,
                     );
                     const entityKey = contentWithEntity.getLastCreatedEntityKey();
-        
+
                     const newContent = Modifier.replaceText(
                         contentWithEntity,
                         selection,
@@ -193,30 +192,30 @@
                         null,
                         entityKey,
                     );
-        
+
                     const nextState = EditorState.push(
                         editorState,
                         newContent,
                         'insert-characters',
                     );
-                    
+
                     onComplete(nextState);
-        
+
                 };
-        
+
                 render() {
                     return null;
                 }
             }
-        
+
             const ModelEntity = (props) => {
                 const { entityKey, contentState } = props;
                 const data = contentState.getEntity(entityKey).getData();
                 const TooltipEntity = window.draftail.TooltipEntity;
-        
+
                 let icon = React.createElement(window.wagtail.components.Icon, {name: config.iconName});
                 let label = data.string || `Edit ${data.model_name}`;
-        
+
                 return window.React.createElement(
                     TooltipEntity,
                     {
@@ -230,13 +229,13 @@
                     props.children,
                 );
             };
-            
+
             window.draftail.registerPlugin({
                 type: config.typeName,
                 source: ModelSource,
                 decorator: ModelEntity,
             }, 'entityTypes');
-        
+
 
         });
     }
