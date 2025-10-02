@@ -38,6 +38,11 @@ class GenericLinkHandler(LinkHandler):
         except Exception:
             return "<a>"
 
+    @classmethod
+    def extract_references(cls, attrs):
+        if "id" in attrs:
+            yield cls.get_model(), attrs["id"], "", ""
+
 
 class GenericLinkElementHandler(LinkElementHandler):
     def get_attribute_data(self, attrs):
