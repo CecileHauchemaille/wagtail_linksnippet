@@ -1,7 +1,6 @@
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from django.contrib.contenttypes.models import ContentType
 from django.templatetags.static import static
 from wagtail.admin.rich_text.editors.draftail.features import EntityFeature
 from wagtail import hooks
@@ -93,10 +92,10 @@ def make_editor_js(model_config):
 
 
 def add_snippet_link_button(chooser_viewset, feature_name=None, icon=None):
-    content_type = ContentType.objects.get_for_model(chooser_viewset.model)
+    opts = chooser_viewset.model._meta.concrete_model._meta
 
-    app_label = content_type.app_label
-    model_name = content_type.model
+    app_label = opts.app_label
+    model_name = opts.model_name
     feature_name = feature_name or model_name
 
     model_config = {
